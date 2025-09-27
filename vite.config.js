@@ -18,7 +18,10 @@ export default defineConfig({
     },
   },
   preview: {
-    host: '127.0.0.1',
-    port: 8100,
+    // Для контейнера: слушаем на всех интерфейсах и на нужном порту,
+    // Caddy будет проксировать на finclc:18111
+    host: '0.0.0.0',
+    port: 18111,
+    allowedHosts: ['finclc.agilesolution.ru'],
   },
 })
