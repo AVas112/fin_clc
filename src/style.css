@@ -54,6 +54,9 @@ label {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  /* фиксируем высоту строки заголовка, чтобы все инпуты в сетке начинались на одной линии
+     2 строки по текущей типографике: 0.9rem * 1.5 * 2 ≈ 2.7rem */
+  min-height: 2.8rem;
 }
 
 input[type="number"] {
