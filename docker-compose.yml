@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  fnclc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fnclc:latest
+    container_name: fnclc
+    restart: unless-stopped
+    networks:
+      - caddy_network
+    expose:
+      - "18111"
+    # Для локальной отладки без Caddy раскомментируйте:
+    # ports:
+    #   - "18111:18111"
+
+networks:
+  caddy_network:
+    external: true
+    name: caddy_network

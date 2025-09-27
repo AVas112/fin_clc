@@ -1,0 +1,508 @@
+:root {
+  font-family: "Segoe UI", Arial, sans-serif;
+  line-height: 1.5;
+  color: #1f2937;
+  background: #f3f4f6;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+
+h1 {
+  font-size: 1.75rem;
+  margin-bottom: 1.75rem;
+  text-align: center;
+}
+
+section {
+  background: #fff;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+/* Строка заголовка поля + тултип в одну линию */
+.label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+input[type="number"] {
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+input[type="number"]:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+/* Селекты во входной форме (например, Пробный период) — стиль как у числовых инпутов */
+.form-grid select {
+  margin-top: 0.35rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #fff;
+  color: #111827;
+  transition: border-color 0.2s ease;
+}
+
+.form-grid select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.output-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem 1.5rem;
+}
+
+.card {
+  background: linear-gradient(135deg, #eef2ff, #e0f2fe);
+  padding: 1.2rem;
+  border-radius: 10px;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.card strong {
+  display: inline-block;
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
+  margin-right: 0.35rem;
+  color: #1e3a8a;
+}
+
+.card span {
+  display: block;
+  font-size: 0.95rem;
+  color: #1f2937;
+}
+
+/* Внутри карточек делаем .tooltip именно inline, чтобы значок "i" шел сразу за числом */
+.card .tooltip {
+  display: inline-block;
+}
+
+/* Tooltip: контейнер (используется и в карточках, и в полях форм) */
+.tooltip {
+  display: inline-block; /* чтобы располагаться в строке рядом с текстом */
+  position: relative;
+  vertical-align: baseline;
+}
+
+/* Кнопка-триггер (значок "i") */
+.tooltip-trigger {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid #94a3b8;
+  background: #ffffff;
+  color: #334155;
+  border-radius: 999px;
+  width: 1.2rem;
+  height: 1.2rem;
+  line-height: 1.15rem;
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 0;
+  cursor: help;
+}
+
+.tooltip-trigger:hover,
+.tooltip-trigger:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+}
+
+/* Содержимое тултипа */
+.tooltip-content {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  min-width: 260px;
+  max-width: min(560px, calc(100vw - 2rem));
+  width: max-content;
+  padding: 0.5rem 0.65rem;
+  background: #ffffff;
+  color: #111827;
+  border-radius: 8px;
+  border: 1px solid rgba(17, 24, 39, 0.15);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  z-index: 20;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  visibility: hidden;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+}
+
+/* Стрелочка тултипа */
+.tooltip-content::before {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  border-right: 1px solid rgba(17, 24, 39, 0.15);
+  border-bottom: 1px solid rgba(17, 24, 39, 0.15);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+/* Показ по hover и фокусу внутри контейнера */
+.tooltip:hover .tooltip-content,
+.tooltip:focus-within .tooltip-content {
+  visibility: visible;
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* Summary card layout */
+.summary-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem 1.5rem;
+  margin-top: 0.5rem;
+}
+
+/* Растянуть сводную карточку на всю ширину сетки результатов */
+.output-grid .summary-card {
+  grid-column: 1 / -1;
+}
+
+/* Break-even row: 2 карточки в одной строке на всю ширину */
+.break-even-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.5rem;
+}
+
+.output-grid > .break-even-row {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .break-even-row {
+    grid-template-columns: 1fr; /* на мобильных — в столбик */
+  }
+}
+
+/* Unit metrics (LTV и LTV/CAC) — 2 карточки в ряд, на всю ширину */
+.unit-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.output-grid > .unit-metrics-row {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .unit-metrics-row {
+    grid-template-columns: 1fr; /* на мобильных — в столбик */
+  }
+}
+
+/* LTV combined card */
+.ltv-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  row-gap: 1rem;
+}
+
+.output-grid > .ltv-card {
+  grid-column: 1 / -1;
+}
+
+.ltv-item > span:last-child {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+/* Селект периода внутри LTV-карточки */
+.ltv-select {
+  display: inline-block;
+  margin: 0 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 0.95rem;
+  color: #111827;
+}
+
+.ltv-select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.summary-item > span:last-child {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.note {
+  font-size: 0.92rem;
+  color: #374151;
+  margin-top: 1rem;
+  line-height: 1.4;
+}
+
+/* Chart styles */
+.chart-card {
+  margin-top: 0.75rem;
+  position: relative;
+}
+
+/* Растянуть карточку графика на всю ширину сетки результатов */
+.output-grid .chart-card {
+  grid-column: 1 / -1;
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.chart-card svg {
+  width: 100%;
+  height: 240px;
+  display: block;
+}
+
+.chart-x-axis {
+  font-size: 0.85rem;
+  color: #374151;
+  margin-top: 0.25rem;
+}
+
+.chart-grid line {
+  stroke: #e5e7eb;
+  stroke-width: 1;
+}
+
+.chart-zero line {
+  stroke: #9ca3af;
+  stroke-dasharray: 4 4;
+}
+
+.chart-area {
+  fill: url(#cumGradient);
+}
+
+.chart-point {
+  fill: #1e3a8a;
+}
+
+.chart-focus-point {
+  fill: #ef4444;
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.chart-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #111827;
+  color: #f9fafb;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18);
+  transform: translate(-50%, -110%);
+  white-space: nowrap;
+  z-index: 30;
+  display: none;
+}
+
+@media (max-width: 640px) {
+  main {
+    padding: 2rem 1rem 3rem;
+  }
+
+  section {
+    padding: 1.25rem;
+  }
+}
+
+/* ---------- Липкая панель и выдвижной оверлей для блока «Входные данные» ---------- */
+html.no-scroll, html.no-scroll body {
+  overflow: hidden;
+}
+
+/* Узкая фиксированная панель наверху */
+.inputs-sticky {
+  position: fixed;
+  top: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 902; /* выше контента и графиков */
+  transform: translateY(-110%);
+  opacity: 0;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+  pointer-events: none; /* кликабельна только кнопка */
+}
+
+.inputs-sticky.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.inputs-sticky-btn {
+  pointer-events: auto;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: linear-gradient(135deg, #eef2ff, #e0f2fe);
+  color: #1e3a8a;
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.95rem;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+}
+
+.inputs-sticky-btn:hover,
+.inputs-sticky-btn:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+}
+
+/* Затемнение фона */
+.inputs-backdrop[hidden] { display: none !important; }
+.inputs-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  z-index: 900;
+}
+.inputs-backdrop.open { opacity: 1; }
+
+/* Выдвижная панель (диалог) */
+.inputs-drawer[hidden] { display: none !important; }
+.inputs-drawer {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translate(-50%, -12px);
+  width: min(960px, calc(100vw - 1.5rem));
+  max-height: calc(100vh - 20px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.25);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  z-index: 901;
+}
+
+.inputs-drawer.open {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+.inputs-drawer-header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1rem;
+  background: linear-gradient(135deg, #eef2ff, #e0f2fe);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  z-index: 1;
+}
+
+.inputs-drawer-close {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  border-radius: 8px;
+  width: 2rem;
+  height: 2rem;
+  line-height: 1.9rem;
+  font-size: 1.1rem;
+  text-align: center;
+  cursor: pointer;
+}
+
+.inputs-drawer-close:hover,
+.inputs-drawer-close:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.inputs-drawer-content {
+  padding: 1rem;
+}
+
+/* Заглушка, чтобы не прыгала страница при переносе формы в диалог */
+.inputs-placeholder { height: 0; }
+
+@media (max-width: 640px) {
+  .inputs-sticky { top: 8px; }
+  .inputs-drawer {
+    top: 8px;
+    width: calc(100vw - 1rem);
+    max-height: calc(100vh - 14px);
+  }
+}
