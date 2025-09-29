@@ -8,7 +8,7 @@ root.innerHTML = `
       <div class="form-grid" id="inputs">
         <label>
           <span class="label-row">Фиксированные расходы (₽/мес.)</span>
-          <input type="number" id="opex" value="160000" min="0" step="1000" />
+          <input type="number" id="opex" value="180000" min="0" step="1000" />
         </label>
         <label>
           <span class="label-row">CAC - стоимость привлечения клиента (₽)</span>
@@ -24,11 +24,11 @@ root.innerHTML = `
         </label>
         <label>
           <span class="label-row">Выручка за внедрение (₽)</span>
-          <input type="number" id="implementationRevenue" value="30000" min="0" step="1000" />
+          <input type="number" id="implementationRevenue" value="35000" min="0" step="1000" />
         </label>
         <label>
           <span class="label-row">Ежемесячная абонентская плата (₽)</span>
-          <input type="number" id="subscriptionRevenue" value="5000" min="0" step="500" />
+          <input type="number" id="subscriptionRevenue" value="9000" min="0" step="500" />
         </label>
         <label>
           <span class="label-row">
@@ -38,7 +38,7 @@ root.innerHTML = `
               <span role="tooltip" id="tip-cogs" class="tooltip-content">COGS (Cost of Goods Sold) — переменные затраты на обслуживание одного платящего клиента в месяц. Обычно сюда входят расходы, которые растут вместе с количеством клиентов: хостинг и облачная инфраструктура, лицензии сторонних сервисов на пользователя, платёжные комиссии, техподдержка на клиента, СМС/e‑mail‑рассылки и т.п. Эти затраты вычитаются из абонентской платы при расчёте валовой маржи.</span>
             </span>
           </span>
-          <input type="number" id="cogs" value="0" min="0" step="100" />
+          <input type="number" id="cogs" value="3000" min="0" step="100" />
         </label>
         <label>
           <span class="label-row">
@@ -52,7 +52,7 @@ root.innerHTML = `
             <option value="0">0</option>
             <option value="0.25">1 неделя</option>
             <option value="0.5">2 недели</option>
-            <option value="1">1 месяц</option>
+            <option value="1" selected>1 месяц</option>
             <option value="2">2 месяца</option>
             <option value="3">3 месяца</option>
           </select>
@@ -65,21 +65,21 @@ root.innerHTML = `
               <span role="tooltip" id="tip-conv" class="tooltip-content">Доля клиентов, перешедших из пробного периода в платящую подписку. Влияет на число активных платящих клиентов и подписочную выручку/прибыль. На внедрение не влияет.</span>
             </span>
           </span>
-          <input type="number" id="trialConversion" value="100" min="0" max="100" step="1" />
+          <input type="number" id="trialConversion" value="30" min="0" max="100" step="1" />
         </label>
         <label>
           <span class="label-row">
             Месячный churn (%)
             <span class="tooltip">
               <button class="tooltip-trigger" type="button" aria-describedby="tip-churn" aria-label="Пояснение churn">i</button>
-              <span role="tooltip" id="tip-churn" class="tooltip-content">Процент оттока платящих клиентов в месяц. Модель удержания геометрическая: вероятность оставаться платящим k-й месяц подряд равна (1 − churn)^(k−1). При churn=0 активные растут линейно, при churn&gt;0 стремятся к плато.</span>
+              <span role="tooltip" id="tip-churn" class="tooltip-content">Процент оттока платящих клиентов в месяц. Модель удержания геометрическая: вероятность оставаться платящим k-й месяц подряд равна (1 − churn)^(k−1). При churn=0 активные растут линейно, при churn>0 стремятся к плато.</span>
             </span>
           </span>
-          <input type="number" id="churnPct" value="0" min="0" max="100" step="0.5" />
+          <input type="number" id="churnPct" value="10" min="0" max="100" step="0.5" />
         </label>
         <label>
-          <span class="label-row">Новые клиенты в месяц (шт.)</span>
-          <input type="number" id="newClientsPerMonth" value="5" min="0" step="1" />
+          <span class="label-row">Платящие клиенты в месяц (шт.)</span>
+          <input type="number" id="newClientsPerMonth" value="8" min="0" step="1" />
         </label>
       </div>
     </section>
@@ -149,6 +149,7 @@ let chartMonthsState = 12;
 let revenueModeState = "subscription"; // 'subscription' | 'total'
 let revMetricState = "revenue"; // 'revenue' | 'profit'
 let revenueChartMonthsState = 12; // 12 | 24
+let sumSubModeState = "revenue"; // 'revenue' | 'margin'
 
 function calculate() {
   const opex = sanitize(inputs.opex.value);
@@ -167,6 +168,10 @@ function calculate() {
   const ltvMonths = Math.max(1, sanitize(ltvMonthsState, 12));
   const chartMonths = Math.max(1, sanitize(chartMonthsState, 12));
 
+  // Для метрик потоков и плато считаем как для платящих клиентов: без trial и без конверсии
+  const convFlow = 1;
+  const trialFlow = 0;
+
   const laborCost = hours * rate;
   const implementationCost = cac + laborCost;
   const implementationProfit = implementationRevenue - implementationCost;
@@ -175,7 +180,9 @@ function calculate() {
   const breakEvenSubscription = subMarginPerMonth > 0 ? Math.ceil(opex / subMarginPerMonth) : Infinity;
   const clientsAtBreakEven = Number.isFinite(breakEvenImplementation) ? breakEvenImplementation : null;
   const totalFromImplementations = clientsAtBreakEven != null ? clientsAtBreakEven * implementationProfit : null;
-  const totalFromSubscription = clientsAtBreakEven != null ? clientsAtBreakEven * subscriptionRevenue : null;
+  const totalFromSubscriptionRevenue = clientsAtBreakEven != null ? clientsAtBreakEven * subscriptionRevenue : null;
+  const totalFromSubscriptionMargin = clientsAtBreakEven != null ? clientsAtBreakEven * (subscriptionRevenue - cogs) : null;
+  const totalFromSubscription = sumSubModeState === "margin" ? totalFromSubscriptionMargin : totalFromSubscriptionRevenue;
 
   // Эффективное число платящих месяцев за выбранный горизонт LTV с учётом пробного периода
   const effectiveLtvMonths = Math.max(0, ltvMonths - trialMonths); // оплачиваемые месяцы в выбранном горизонте
@@ -197,8 +204,8 @@ function calculate() {
   const lifetimeProfit = implementationProfit + subMarginPerMonth * retentionSum(effectiveLtvMonths); // ожидаемая прибыль за горизонт по валовой марже
   const implementationMargin = implementationRevenue > 0 ? implementationProfit / implementationRevenue : NaN;
   const lifetimeMargin = extendedRevenue > 0 ? lifetimeProfit / extendedRevenue : NaN;
-  // Плато (установившееся состояние): активные ≈ новые × конверсия / churn (если churn>0; иначе растут линейно)
-  const plateauActive = churn > 0 ? (newClients * conversion) / churn : newClients * conversion * ltvMonths;
+  // Плато (установившееся состояние): активные ≈ платящие клиенты / churn (если churn>0; иначе растут линейно)
+  const plateauActive = churn > 0 ? (newClients * convFlow) / churn : newClients * convFlow * ltvMonths;
   const plateauSubRevenue = plateauActive * subscriptionRevenue;
   const plateauTotalRevenue = newClients * implementationRevenue + plateauSubRevenue;
   const plateauMonthlyProfit = newClients * implementationProfit + plateauActive * subMarginPerMonth - opex;
@@ -216,9 +223,9 @@ function calculate() {
   for (let m = 1; m <= maxMonths; m++) {
     // Активные платящие клиенты с учётом пробного периода d (в мес.) и горизонта жизни LTV
     // Для постоянного притока cohorts: active = newClients * clamp(m - d, 0, ltvMonths)
-    const paidMonths = Math.max(0, m - trialMonths);
+    const paidMonths = Math.max(0, m - trialFlow);
     const n = Math.floor(paidMonths);
-    const activeClients = newClients * conversion * (churn > 0 ? (1 - Math.pow(1 - churn, n)) / churn : n);
+    const activeClients = newClients * convFlow * (churn > 0 ? (1 - Math.pow(1 - churn, n)) / churn : n);
     const monthlyProfit = newClients * implementationProfit + activeClients * subMarginPerMonth - opex;
     const subRevenue = activeClients * subscriptionRevenue;
     const totalRevenue = newClients * implementationRevenue + subRevenue;
@@ -234,20 +241,26 @@ function calculate() {
 
   // Человекочитаемый тултип для графика месячной выручки с формулами и подстановкой
   const revM = Math.min(revenueChartMonthsState, Math.max(1, ltvMonths));
-  const monthsPaidExample = Math.max(0, revM - trialMonths);
+  const monthsPaidExample = Math.max(0, revM - trialFlow);
   const nExample = Math.floor(monthsPaidExample);
-  const activeAtExample = newClients * conversion * (churn > 0 ? (1 - Math.pow(1 - churn, nExample)) / churn : nExample);
+  const activeAtExample = newClients * convFlow * (churn > 0 ? (1 - Math.pow(1 - churn, nExample)) / churn : nExample);
   const subAtExample = activeAtExample * subscriptionRevenue;
   const totalAtExample = newClients * implementationRevenue + subAtExample;
   const revTip = `График показывает выручку за каждый месяц.\n\n` +
     `Режим «только подписка».\n` +
-    `Как считаем: подписочная выручка за выбранный месяц = число активных платящих клиентов в этом месяце × абонентская плата.\n` +
-    `Активные платящие = новые клиенты × конверсия × S(n), где n = floor(max(0, месяц − пробный_период)),\n` +
-    `а S(n) = n при churn=0; иначе S(n) = (1 − (1 − churn)^n)/churn.\n` +
-    `Подстановка для месяца ${integerFormatter.format(revM)}: n = ${nExample.toLocaleString('ru-RU')}; активные = ${integerFormatter.format(newClients)} × ${formatPercent(conversion)} × S(${nExample}) = ${integerFormatter.format(activeAtExample)}; выручка = ${integerFormatter.format(activeAtExample)} × ${numberFormatter.format(subscriptionRevenue)} = ${numberFormatter.format(subAtExample)}.\n\n` +
+    `Как считаем: подписочная выручка за выбранный месяц = активные платящие клиенты × абонентская плата.\n` +
+    `Активные платящие = платящие клиенты × S(n), где n = месяц; S(n) = n при churn=0; иначе S(n) = (1 − (1 − churn)^n)/churn.\n` +
+    `Подстановка для месяца ${integerFormatter.format(revM)}: n = ${nExample.toLocaleString('ru-RU')}; активные = ${integerFormatter.format(newClients)} × S(${nExample}) = ${integerFormatter.format(activeAtExample)}; выручка = ${integerFormatter.format(activeAtExample)} × ${numberFormatter.format(subscriptionRevenue)} = ${numberFormatter.format(subAtExample)}.\n\n` +
     `Режим «всего (внедрение + подписка)».\n` +
-    `Как считаем: выручка месяца = новые клиенты × выручка за внедрение + подписочная выручка месяца.\n` +
-    `Подстановка для месяца ${integerFormatter.format(revM)}: ${integerFormatter.format(newClients)} × ${numberFormatter.format(implementationRevenue)} + ${integerFormatter.format(activeAtExample)} × ${numberFormatter.format(subscriptionRevenue)} = ${numberFormatter.format(totalAtExample)}.`;
+    `Как считаем: выручка месяца = платящие клиенты × выручка за внедрение + подписочная выручка месяца.\n` +
+    `Подстановка для месяца ${integerFormatter.format(revM)}: ${integerFormatter.format(newClients)} × ${numberFormatter.format(implementationRevenue)} + ${integerFormatter.format(activeAtExample)} × ${numberFormatter.format(subscriptionRevenue)} = ${numberFormatter.format(totalAtExample)}`;
+
+  // Подсказка для «Сумма от подписки при точке БУ» в зависимости от режима
+  const sumSubTooltipHtml = clientsAtBreakEven == null
+    ? "не рассчитывается (точка безубыточности по внедрениям не определена)."
+    : (sumSubModeState === "margin"
+      ? `Формула: сумма от подписки (по марже) = (клиентов на точке безубыточности по внедрениям) × (абонплата − COGS).<br/>Подстановка: ${formatClients(clientsAtBreakEven)} × (${numberFormatter.format(subscriptionRevenue)} − ${numberFormatter.format(cogs)}) = ${numberFormatter.format(totalFromSubscriptionMargin ?? 0)}.`
+      : `Формула: сумма от подписки (по выручке) = (клиентов на точке безубыточности по внедрениям) × (ежемесячная абонентская плата).<br/>Подстановка: ${formatClients(clientsAtBreakEven)} × ${numberFormatter.format(subscriptionRevenue)} = ${numberFormatter.format(totalFromSubscriptionRevenue ?? 0)}.`);
 
   outputs.innerHTML = `
     <div class="card">
@@ -301,9 +314,15 @@ function calculate() {
         <strong>${totalFromSubscription != null ? numberFormatter.format(totalFromSubscription) : "—"}</strong>
         <span class="tooltip">
           <button class="tooltip-trigger" type="button" aria-describedby="tip-sum-sub" aria-label="Пояснение расчета">i</button>
-          <span role="tooltip" id="tip-sum-sub" class="tooltip-content">Формула: сумма от подписки = (клиентов на точке безубыточности по внедрениям) × (ежемесячная абонентская плата).<br/>Подстановка: ${clientsAtBreakEven != null && subscriptionRevenue > 0 ? `${formatClients(clientsAtBreakEven)} × ${numberFormatter.format(subscriptionRevenue)} = ${numberFormatter.format(totalFromSubscription)}` : "не рассчитывается (нет точки безубыточности или абонплата не задана)"}.</span>
+          <span role="tooltip" id="tip-sum-sub" class="tooltip-content">${sumSubTooltipHtml}</span>
         </span>
-        <span>Сумма от подписки при точке безубыточности</span>
+        <span>
+          Сумма от подписки при точке безубыточности — режим
+          <select id="sumSubMode" class="ltv-select" aria-label="Режим суммы от подписки: по выручке/по марже">
+            <option value="revenue" ${sumSubModeState === "revenue" ? "selected" : ""}>по выручке</option>
+            <option value="margin" ${sumSubModeState === "margin" ? "selected" : ""}>по марже</option>
+          </select>
+        </span>
       </div>
     </div>
     <div class="card ltv-card">
@@ -379,7 +398,7 @@ function calculate() {
         <strong>${formatPercent(plateauMargin)}</strong>
         <span class="tooltip">
           <button class="tooltip-trigger" type="button" aria-describedby="tip-margin-plateau" aria-label="Пояснение расчета">i</button>
-          <span role="tooltip" id="tip-margin-plateau" class="tooltip-content">Месячная маржа на плато — доля прибыли в выручке в устойчивом состоянии при постоянном притоке и месячном churn. Формула: маржа_месяца = прибыль_месяца / выручка_месяца × 100%, где прибыль_месяца = новые_клиенты × прибыль_внедрения + (активные_клиенты × (абонплата − COGS)) − фикс. расходы; активные_клиенты на плато ≈ новые_клиенты × конверсия / churn (если churn>0).<br/>Подстановка: прибыль_месяца = ${integerFormatter.format(newClients)}×${numberFormatter.format(implementationProfit)} + (${integerFormatter.format(plateauActive)}×(${numberFormatter.format(subscriptionRevenue)} − ${numberFormatter.format(cogs)})) − ${numberFormatter.format(opex)} = ${numberFormatter.format(plateauMonthlyProfit)}; выручка_месяца = ${integerFormatter.format(newClients)}×${numberFormatter.format(implementationRevenue)} + (${integerFormatter.format(plateauActive)}×${numberFormatter.format(subscriptionRevenue)}) = ${numberFormatter.format(plateauTotalRevenue)}; маржа = ${formatPercent(plateauMargin)}.</span>
+          <span role="tooltip" id="tip-margin-plateau" class="tooltip-content">Месячная маржа на плато — доля прибыли в выручке в устойчивом состоянии при постоянном притоке платящих и месячном churn. Формула: маржа_месяца = прибыль_месяца / выручка_месяца × 100%, где прибыль_месяца = платящие_клиенты × прибыль_внедрения + (активные_клиенты × (абонплата − COGS)) − фикс. расходы; активные_клиенты на плато ≈ платящие_клиенты / churn (если churn>0).<br/>Подстановка: прибыль_месяца = ${integerFormatter.format(newClients)}×${numberFormatter.format(implementationProfit)} + (${integerFormatter.format(plateauActive)}×(${numberFormatter.format(subscriptionRevenue)} − ${numberFormatter.format(cogs)})) − ${numberFormatter.format(opex)} = ${numberFormatter.format(plateauMonthlyProfit)}; выручка_месяца = ${integerFormatter.format(newClients)}×${numberFormatter.format(implementationRevenue)} + (${integerFormatter.format(plateauActive)}×${numberFormatter.format(subscriptionRevenue)}) = ${numberFormatter.format(plateauTotalRevenue)}; маржа = ${formatPercent(plateauMargin)}.</span>
         </span>
         <span>Месячная маржа на плато</span>
       </div>
@@ -400,7 +419,7 @@ function calculate() {
         </span>
         <span class="tooltip">
           <button class="tooltip-trigger" type="button" aria-describedby="tip-chart" aria-label="Пояснение расчета">i</button>
-          <span role="tooltip" id="tip-chart" class="tooltip-content">На графике показана накопленная прибыль: в каждом месяце учитывается прибыль от внедрений (разовый доход в месяц привлечения), подписка от накопившейся платящей базы с учётом пробного периода и конверсии trial→paid, вычитаются COGS (переменная себестоимость подписки) и фиксированные расходы. Положительное значение означает выход в операционный плюс.</span>
+          <span role="tooltip" id="tip-chart" class="tooltip-content">На графике показана накопленная прибыль: в каждом месяце учитывается разовая прибыль от внедрений (в месяц привлечения) и маржа подписки от активной базы платящих клиентов (абонплата − COGS); затем вычитаются фиксированные расходы. Пробный период и конверсия trial→paid здесь не учитываются, так как вводится число платящих клиентов в месяц. Положительное значение означает выход в операционный плюс.</span>
         </span>
       </div>
       <svg id="cumChart" viewBox="0 0 800 240" preserveAspectRatio="none" aria-label="График кумулятивной прибыли"></svg>
@@ -582,8 +601,8 @@ function calculate() {
         const month = idx + 1;
         const monthProfit = monthly[idx];
         const cumProfit = data[idx];
-        const monthlyFormula = `Помесячно = новые клиенты × прибыль с внедрения + (активные клиенты × (абонплата − COGS)) − фикс. расходы, где активные клиенты = новые клиенты × конверсия × S(n), n = floor(max(месяц − ${trialMonths}, 0)), S(n): при churn=0 — n; иначе S(n) = (1 − (1 − churn)^n)/churn.`;
-        const activeClientsNow = newClients * conversion * (churn > 0 ? (1 - Math.pow(1 - churn, Math.floor(Math.max(0, month - trialMonths)))) / churn : Math.floor(Math.max(0, month - trialMonths)));
+        const monthlyFormula = `Помесячно = платящие клиенты × прибыль с внедрения + (активные платящие × (абонплата − COGS)) − фикс. расходы, где активные платящие = платящие клиенты × S(n), n = месяц; S(n): при churn=0 — n; иначе S(n) = (1 − (1 − churn)^n)/churn.`;
+        const activeClientsNow = newClients * convFlow * (churn > 0 ? (1 - Math.pow(1 - churn, Math.floor(Math.max(0, month - trialFlow)))) / churn : Math.floor(Math.max(0, month - trialFlow)));
         const monthlySub = `${integerFormatter.format(newClients)} × ${numberFormatter.format(implementationProfit)} + (${integerFormatter.format(activeClientsNow)} × (${numberFormatter.format(subscriptionRevenue)} − ${numberFormatter.format(cogs)})) − ${numberFormatter.format(opex)} = ${numberFormatter.format(monthly[idx])}.`;
         const cumFormula = `Кумулятивно = сумма помесячной прибыли за 1…${integerFormatter.format(month)}.`;
         tooltip.innerHTML = `Месяц ${integerFormatter.format(month)}<br/>${monthlyFormula}<br/>Подстановка: ${monthlySub}<br/>Итого к концу месяца: ${numberFormatter.format(cumProfit)}`;
@@ -741,15 +760,15 @@ function calculate() {
         // Активные платящие клиенты в выбранном месяце для тултипа считаем так же,
         // как и в вычислениях данных графика: через геометрическую сумму удержания S(n).
         // n = floor(max(0, месяц − пробный_период))
-        const nNow = Math.floor(Math.max(0, month - trialMonths));
-        const activeClientsNow = newClients * conversion * (churn > 0 ? (1 - Math.pow(1 - churn, nNow)) / churn : nNow);
+        const nNow = Math.floor(Math.max(0, month - trialFlow));
+        const activeClientsNow = newClients * convFlow * (churn > 0 ? (1 - Math.pow(1 - churn, nNow)) / churn : nNow);
         const sub = activeClientsNow * subscriptionRevenue;
         if (revMetricState === "revenue") {
           if (revenueModeState === "subscription") {
             tooltip.innerHTML = `Месяц ${integerFormatter.format(month)}<br/>Формула: активные клиенты × абонплата<br/>Подстановка: ${integerFormatter.format(activeClientsNow)} × ${numberFormatter.format(subscriptionRevenue)} = ${numberFormatter.format(sub)}`;
           } else {
             const total = newClients * implementationRevenue + sub;
-            tooltip.innerHTML = `Месяц ${integerFormatter.format(month)}<br/>Формула: новые клиенты × выручка за внедрение + (активные клиенты × абонплата)<br/>Подстановка: ${integerFormatter.format(newClients)} × ${numberFormatter.format(implementationRevenue)} + (${integerFormatter.format(activeClientsNow)} × ${numberFormatter.format(subscriptionRevenue)}) = ${numberFormatter.format(total)}`;
+            tooltip.innerHTML = `Месяц ${integerFormatter.format(month)}<br/>Формула: платящие клиенты × выручка за внедрение + (активные клиенты × абонплата)<br/>Подстановка: ${integerFormatter.format(newClients)} × ${numberFormatter.format(implementationRevenue)} + (${integerFormatter.format(activeClientsNow)} × ${numberFormatter.format(subscriptionRevenue)}) = ${numberFormatter.format(total)}`;
           }
         } else {
           if (revenueModeState === "subscription") {
@@ -757,7 +776,7 @@ function calculate() {
             tooltip.innerHTML = `Месяц ${integerFormatter.format(month)}<br/>Формула: (активные клиенты × (абонплата − COGS)) − фикс. расходы<br/>Подстановка: (${integerFormatter.format(activeClientsNow)} × (${numberFormatter.format(subscriptionRevenue)} − ${numberFormatter.format(cogs)})) − ${numberFormatter.format(opex)} = ${numberFormatter.format(profit)}`;
           } else {
             const profit = newClients * implementationProfit + activeClientsNow * (subscriptionRevenue - cogs) - opex;
-            tooltip.innerHTML = `Месяц ${integerFormatter.format(month)}<br/>Формула: новые клиенты × прибыль с внедрения + (активные клиенты × (абонплата − COGS)) − фикс. расходы<br/>Подстановка: ${integerFormatter.format(newClients)} × ${numberFormatter.format(implementationProfit)} + (${integerFormatter.format(activeClientsNow)} × (${numberFormatter.format(subscriptionRevenue)} − ${numberFormatter.format(cogs)})) − ${numberFormatter.format(opex)} = ${numberFormatter.format(profit)}`;
+            tooltip.innerHTML = `Месяц ${integerFormatter.format(month)}<br/>Формула: платящие клиенты × прибыль с внедрения + (активные клиенты × (абонплата − COGS)) − фикс. расходы<br/>Подстановка: ${integerFormatter.format(newClients)} × ${numberFormatter.format(implementationProfit)} + (${integerFormatter.format(activeClientsNow)} × (${numberFormatter.format(subscriptionRevenue)} − ${numberFormatter.format(cogs)})) − ${numberFormatter.format(opex)} = ${numberFormatter.format(profit)}`;
           }
         }
       }
@@ -825,6 +844,18 @@ function calculate() {
       const v = Number(e.target.value);
       if (v === 12 || v === 24) {
         revenueChartMonthsState = v;
+        calculate();
+      }
+    });
+  }
+
+  // Переключатель режима «Сумма от подписки при точке БУ»: по выручке / по марже
+  const sumSubModeSelect = document.getElementById("sumSubMode");
+  if (sumSubModeSelect) {
+    sumSubModeSelect.addEventListener("change", (e) => {
+      const v = String(e.target.value);
+      if (v === "revenue" || v === "margin") {
+        sumSubModeState = v;
         calculate();
       }
     });
