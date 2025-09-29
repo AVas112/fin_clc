@@ -45,7 +45,7 @@ root.innerHTML = `
             Пробный период
             <span class="tooltip">
               <button class="tooltip-trigger" type="button" aria-describedby="tip-trial" aria-label="Пояснение пробного периода">i</button>
-              <span role="tooltip" id="tip-trial" class="tooltip-content">В течение пробного периода клиент не оплачивает подписку. Это сдвигает начало подписочных поступлений, снижая LTV за выбранный горизонт и перенося точку выхода в операционный плюс на более поздние месяцы.</span>
+              <span role="tooltip" id="tip-trial" class="tooltip-content">В течение пробного периода клиент не оплачивает подписку. В этой модели пробный период уменьшает LTV за выбранный горизонт (n = max(0, горизонт − пробный_период)), но не влияет на графики потоков (кумулятивная прибыль и месячная выручка/прибыль), так как вводится число платящих клиентов в месяц.</span>
             </span>
           </span>
           <select id="trialPeriod">
@@ -62,7 +62,7 @@ root.innerHTML = `
             Конверсия trial→paid (%)
             <span class="tooltip">
               <button class="tooltip-trigger" type="button" aria-describedby="tip-conv" aria-label="Пояснение конверсии">i</button>
-              <span role="tooltip" id="tip-conv" class="tooltip-content">Доля клиентов, перешедших из пробного периода в платящую подписку. Влияет на число активных платящих клиентов и подписочную выручку/прибыль. На внедрение не влияет.</span>
+              <span role="tooltip" id="tip-conv" class="tooltip-content">Доля клиентов, перешедших из пробного периода в платящую подписку. В текущей модели не участвует в формулах и графиках: вы вводите уже платящих клиентов. На LTV и плато также не влияет; поле оставлено для сценариев с потоком trial.</span>
             </span>
           </span>
           <input type="number" id="trialConversion" value="30" min="0" max="100" step="1" />
@@ -259,8 +259,8 @@ function calculate() {
   const sumSubTooltipHtml = clientsAtBreakEven == null
     ? "не рассчитывается (точка безубыточности по внедрениям не определена)."
     : (sumSubModeState === "margin"
-      ? `Формула: сумма от подписки (по марже) = (клиентов на точке безубыточности по внедрениям) × (абонплата − COGS).<br/>Подстановка: ${formatClients(clientsAtBreakEven)} × (${numberFormatter.format(subscriptionRevenue)} − ${numberFormatter.format(cogs)}) = ${numberFormatter.format(totalFromSubscriptionMargin ?? 0)}.`
-      : `Формула: сумма от подписки (по выручке) = (клиентов на точке безубыточности по внедрениям) × (ежемесячная абонентская плата).<br/>Подстановка: ${formatClients(clientsAtBreakEven)} × ${numberFormatter.format(subscriptionRevenue)} = ${numberFormatter.format(totalFromSubscriptionRevenue ?? 0)}.`);
+      ? `Смысл: месячный объём от подписки при количестве клиентов, достаточном для покрытия фиксированных расходов за счёт прибыли от внедрений.<br/>Формула: сумма от подписки за месяц (по марже) = (клиентов на точке безубыточности по внедрениям) × (абонплата − COGS).<br/>Подстановка: ${formatClients(clientsAtBreakEven)} × (${numberFormatter.format(subscriptionRevenue)} − ${numberFormatter.format(cogs)}) = ${numberFormatter.format(totalFromSubscriptionMargin ?? 0)}.`
+      : `Смысл: месячный объём от подписки при количестве клиентов, достаточном для покрытия фиксированных расходов за счёт прибыли от внедрений.<br/>Формула: сумма от подписки за месяц (по выручке) = (клиентов на точке безубыточности по внедрениям) × (ежемесячная абонентская плата).<br/>Подстановка: ${formatClients(clientsAtBreakEven)} × ${numberFormatter.format(subscriptionRevenue)} = ${numberFormatter.format(totalFromSubscriptionRevenue ?? 0)}.`);
 
   outputs.innerHTML = `
     <div class="card">
@@ -317,8 +317,8 @@ function calculate() {
           <span role="tooltip" id="tip-sum-sub" class="tooltip-content">${sumSubTooltipHtml}</span>
         </span>
         <span>
-          Сумма от подписки при точке безубыточности — режим
-          <select id="sumSubMode" class="ltv-select" aria-label="Режим суммы от подписки: по выручке/по марже">
+          Сумма от подписки за месяц при точке безубыточности — режим
+          <select id="sumSubMode" class="ltv-select" aria-label="Режим суммы от подписки за месяц: по выручке/по марже">
             <option value="revenue" ${sumSubModeState === "revenue" ? "selected" : ""}>по выручке</option>
             <option value="margin" ${sumSubModeState === "margin" ? "selected" : ""}>по марже</option>
           </select>
@@ -390,7 +390,7 @@ function calculate() {
         <strong>${formatPercent(lifetimeMargin)}</strong>
         <span class="tooltip">
           <button class="tooltip-trigger" type="button" aria-describedby="tip-margin-ltv" aria-label="Пояснение расчета">i</button>
-          <span role="tooltip" id="tip-margin-ltv" class="tooltip-content">Маржа за жизненный цикл (за выбранный горизонт) — доля прибыли с клиента относительно суммарной выручки (внедрение + подписка), с учётом пробного периода и COGS. Формула: маржа_LTV = (прибыль внедрения + (абонплата − COGS) × платящие_месяцы) / (выручка внедрения + абонплата × платящие_месяцы) × 100%, где платящие_месяцы = max(0, срок − пробный_период).<br/>Подстановка: (${numberFormatter.format(implementationProfit)} + (${numberFormatter.format(subscriptionRevenue)} − ${numberFormatter.format(cogs)})×${integerFormatter.format(effectiveLtvMonths)}) / (${numberFormatter.format(implementationRevenue)} + ${numberFormatter.format(subscriptionRevenue)}×${integerFormatter.format(effectiveLtvMonths)}) = ${formatPercent(lifetimeMargin)}.</span>
+          <span role="tooltip" id="tip-margin-ltv" class="tooltip-content">Маржа за жизненный цикл (за выбранный горизонт) — доля прибыли с клиента относительно суммарной выручки (внедрение + подписка), с учётом пробного периода и COGS. Формула: маржа_LTV = (прибыль внедрения + (абонплата − COGS) × S(n)) / (выручка внедрения + абонплата × S(n)) × 100%, где n = max(0, горизонт − пробный_период), S(n) = n при churn=0; иначе S(n) = (1 − (1 − churn)^n)/churn.<br/>Подстановка: (${numberFormatter.format(implementationProfit)} + (${numberFormatter.format(subscriptionRevenue)} − ${numberFormatter.format(cogs)})×S(${integerFormatter.format(effectiveLtvMonths)})) / (${numberFormatter.format(implementationRevenue)} + ${numberFormatter.format(subscriptionRevenue)}×S(${integerFormatter.format(effectiveLtvMonths)})) = ${formatPercent(lifetimeMargin)}.</span>
         </span>
         <span>Маржа за жизненный цикл (за выбранный горизонт)</span>
       </div>
